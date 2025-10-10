@@ -1,27 +1,67 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K8s Calculator</title>
+    <title>Advanced Calculator - Kubernetes CI/CD</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="calculator">
-        <h1>Kubernetes Calculator</h1>
-        <div class="input-group">
-            <input type="number" id="num1" placeholder="First number">
-            <select id="operation">
-                <option value="add">+</option>
-                <option value="subtract">-</option>
-                <option value="multiply">*</option>
-                <option value="divide">/</option>
-            </select>
-            <input type="number" id="num2" placeholder="Second number">
+    <div class="container">
+        <header>
+            <h1>🧮 Advanced Calculator</h1>
+            <p class="subtitle">Powered by Kubernetes & CI/CD</p>
+        </header>
+
+        <div class="calculator">
+            <div class="display">
+                <div id="expression">0</div>
+                <div id="result">0</div>
+            </div>
+
+            <div class="buttons">
+                <button class="btn func" onclick="clearDisplay()">C</button>
+                <button class="btn func" onclick="deleteLast()">⌫</button>
+                <button class="btn func" onclick="calculateOperation('sqrt')">√</button>
+                <button class="btn func" onclick="calculateOperation('power')">x²</button>
+
+                <button class="btn num" onclick="appendNumber(7)">7</button>
+                <button class="btn num" onclick="appendNumber(8)">8</button>
+                <button class="btn num" onclick="appendNumber(9)">9</button>
+                <button class="btn operation" onclick="setOperation('divide')">÷</button>
+
+                <button class="btn num" onclick="appendNumber(4)">4</button>
+                <button class="btn num" onclick="appendNumber(5)">5</button>
+                <button class="btn num" onclick="appendNumber(6)">6</button>
+                <button class="btn operation" onclick="setOperation('multiply')">×</button>
+
+                <button class="btn num" onclick="appendNumber(1)">1</button>
+                <button class="btn num" onclick="appendNumber(2)">2</button>
+                <button class="btn num" onclick="appendNumber(3)">3</button>
+                <button class="btn operation" onclick="setOperation('subtract')">-</button>
+
+                <button class="btn num" onclick="appendNumber(0)">0</button>
+                <button class="btn" onclick="appendDecimal()">.</button>
+                <button class="btn operation" onclick="calculatePercentage()">%</button>
+                <button class="btn operation" onclick="setOperation('add')">+</button>
+
+                <button class="btn equals" onclick="calculateResult()">=</button>
+            </div>
         </div>
-        <button onclick="calculate()">Calculate</button>
-        <div id="result"></div>
+
+        <div class="history">
+            <h3>Operations History</h3>
+            <div id="history-list">No operations yet</div>
+        </div>
+
+        <footer>
+            <div class="status">
+                <span id="status">🟢 System Online</span>
+                <span id="version">v2.0.0</span>
+            </div>
+        </footer>
     </div>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
