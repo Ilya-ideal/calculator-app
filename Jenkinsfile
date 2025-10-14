@@ -17,6 +17,7 @@ pipeline {
             steps {
                 checkout scm
                 echo "✅ Code checked out successfully from GitHub"
+                sh 'ls -la'  // Покажем структуру файлов
             }
         }
 
@@ -24,7 +25,10 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building Docker image..."
-                    docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                    // Строим из папки docker/app
+                    dir('docker/app') {
+                        docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}", ".")
+                    }
                 }
             }
         }
@@ -35,6 +39,8 @@ pipeline {
                     echo "📤 Pushing Docker image to Docker Hub..."
                     docker.withRegistry('', 'dockerhub-credentials') {
                         docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
+                        // Также пушим как latest
+                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push('latest')
                     }
                 }
             }
@@ -46,9 +52,14 @@ pipeline {
                     echo "🚀 Deploying to Kubernetes..."
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                         sh """
-                            echo "Applying Kubernetes manifests..."
+                            echo "Creating namespace..."
                             kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/namespace.yaml
-                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/ -n ${env.K8S_NAMESPACE}
+                            
+                            echo "Deploying application..."
+                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/deployment.yaml
+                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/service.yaml
+                            
+                            echo "Waiting for rollout..."
                             kubectl --kubeconfig=\$KUBECONFIG rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s
                         """
                     }
@@ -79,27 +90,12 @@ pipeline {
         }
         success {
             script {
-                echo "✅ Pipeline succeeded!"
-                // Телеграм уведомления временно отключим для отладки
-                // withCredentials([string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_TOKEN'), string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')]) {
-                //     sh """
-                //         curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
-                //             -d chat_id=\${CHAT_ID} \
-                //             -d text="✅ Calculator App deployed successfully! Build: ${env.BUILD_NUMBER}"
-                //     """
-                // }
+                echo "✅ Pipeline succeeded! Build: ${env.BUILD_NUMBER}"
             }
         }
         failure {
             script {
-                echo "❌ Pipeline failed!"
-                // withCredentials([string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_TOKEN'), string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')]) {
-                //     sh """
-                //         curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
-                //             -d chat_id=\${CHAT_ID} \
-                //             -d text="❌ Calculator App deployment failed! Build: ${env.BUILD_NUMBER}"
-                //     """
-                // }
+                echo "❌ Pipeline failed! Build: ${env.BUILD_NUMBER}"
             }
         }
     }
