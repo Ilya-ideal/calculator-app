@@ -25,10 +25,7 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building Docker image..."
-                    // Строим из папки docker/app
-                    dir('docker/app') {
                         docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}", ".")
-                    }
                 }
             }
         }
