@@ -16,48 +16,58 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                echo "✅ Code checked out successfully from GitHub"
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Логинимся в Docker Hub
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
+                    echo "🔨 Building Docker image..."
+                    docker.build("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}")
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo "📤 Pushing Docker image to Docker Hub..."
+                    docker.withRegistry('', 'dockerhub-credentials') {
+                        docker.image("${env.DOCKER_IMAGE}:${env.DOCKER_TAG}").push()
                     }
-                    
-                    // Собираем образ
-                    sh "docker build -t ${DOCKER_IMAGE}:${env.BUILD_ID} -f docker/app/Dockerfile ."
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh "docker push ${DOCKER_IMAGE}:${env.BUILD_ID}"
+                    echo "🚀 Deploying to Kubernetes..."
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "Applying Kubernetes manifests..."
+                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/namespace.yaml
+                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/ -n ${env.K8S_NAMESPACE}
+                            kubectl --kubeconfig=\$KUBECONFIG rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s
+                        """
+                    }
                 }
             }
         }
 
-        stage('Deploy to K8s') {
+        stage('Health Check') {
             steps {
                 script {
-                    // Обновляем образ в Deployment
-                    sh """
-                    kubectl --kubeconfig=\"${KUBE_CONFIG}\" set image deployment/calculator-app calculator-app=${DOCKER_IMAGE}:${env.BUILD_ID} --namespace=default --record=true
-                    """
-                }
-            }
-        }
-
-        stage('Verify Deployment') {
-            steps {
-                script {
-                    sh """
-                    kubectl --kubeconfig=\"${KUBE_CONFIG}\" rollout status deployment/calculator-app --namespace=default --timeout=3m
-                    """
+                    echo "❤️ Performing health check..."
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                        sh """
+                            echo "=== Pods in ${env.K8S_NAMESPACE} ==="
+                            kubectl --kubeconfig=\$KUBECONFIG get pods -n ${env.K8S_NAMESPACE}
+                            echo "=== Services in ${env.K8S_NAMESPACE} ==="
+                            kubectl --kubeconfig=\$KUBECONFIG get svc -n ${env.K8S_NAMESPACE}
+                        """
+                    }
                 }
             }
         }
@@ -65,34 +75,31 @@ pipeline {
 
     post {
         always {
+            echo "🏁 Pipeline execution completed"
+        }
+        success {
             script {
-                // Очистка - удаляем собранный образ чтобы не засорять диск
-                sh "docker rmi ${DOCKER_IMAGE}:${env.BUILD_ID} || true"
+                echo "✅ Pipeline succeeded!"
+                // Телеграм уведомления временно отключим для отладки
+                // withCredentials([string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_TOKEN'), string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')]) {
+                //     sh """
+                //         curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
+                //             -d chat_id=\${CHAT_ID} \
+                //             -d text="✅ Calculator App deployed successfully! Build: ${env.BUILD_NUMBER}"
+                //     """
+                // }
             }
         }
         failure {
             script {
-                // Уведомление в Telegram при ошибке
-                sh """
-                curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                -d chat_id=${TELEGRAM_CHAT_ID} \
-                -d text="❌ Деплой Calculator App (Build #${env.BUILD_ID}) завершился ОШИБКОЙ! Проверьте Jenkins: ${env.BUILD_URL}"
-                """
-            }
-        }
-        success {
-            script {
-                // Получаем IP Minikube для ссылки
-                def MINIKUBE_IP = sh(
-                    script: 'minikube ip',
-                    returnStdout: true
-                ).trim()
-                
-                sh """
-                curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-                -d chat_id=${TELEGRAM_CHAT_ID} \
-                -d text="✅ Деплой Calculator App (Build #${env.BUILD_ID}) успешно завершен! Приложение доступно по адресу: http://${MINIKUBE_IP}"
-                """
+                echo "❌ Pipeline failed!"
+                // withCredentials([string(credentialsId: 'telegram-bot-token', variable: 'TELEGRAM_TOKEN'), string(credentialsId: 'telegram-chat-id', variable: 'CHAT_ID')]) {
+                //     sh """
+                //         curl -s -X POST "https://api.telegram.org/bot\${TELEGRAM_TOKEN}/sendMessage" \
+                //             -d chat_id=\${CHAT_ID} \
+                //             -d text="❌ Calculator App deployment failed! Build: ${env.BUILD_NUMBER}"
+                //     """
+                // }
             }
         }
     }
