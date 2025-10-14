@@ -44,25 +44,32 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    echo "🚀 Deploying to Kubernetes..."
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        bat """
-                            echo "Creating namespace..."
-                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/namespace.yaml
-                            
-                            echo "Deploying application..."
-                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/deployment.yaml
-                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/service.yaml
-                            
-                            echo "Waiting for rollout..."
-                            kubectl --kubeconfig=%KUBECONFIG% rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s
-                        """
-                    }
-                }
+    steps {
+        script {
+            echo "🚀 Deploying to Kubernetes..."
+            
+            // Покажем какие файлы есть в k8s
+            bat 'dir k8s'
+            
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                bat """
+                    echo "Checking Kubernetes access..."
+                    kubectl --kubeconfig=%KUBECONFIG% cluster-info
+                    
+                    echo "Creating namespace..."
+                    kubectl --kubeconfig=%KUBECONFIG% create namespace calculator --dry-run=client -o yaml | kubectl --kubeconfig=%KUBECONFIG% apply -f -
+                    
+                    echo "Deploying application..."
+                    kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-deployment.yaml
+                    kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-service.yaml
+                    
+                    echo "Waiting for rollout..."
+                    kubectl --kubeconfig=%KUBECONFIG% rollout status deployment/test-app -n calculator --timeout=300s
+                """
             }
         }
+    }
+}
 
         stage('Health Check') {
             steps {
