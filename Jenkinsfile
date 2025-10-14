@@ -17,7 +17,7 @@ pipeline {
             steps {
                 checkout scm
                 echo "✅ Code checked out successfully from GitHub"
-                sh 'ls -la'  // Покажем структуру файлов
+                bat 'dir'  // Покажем структуру файлов в Windows
             }
         }
 
@@ -51,16 +51,16 @@ pipeline {
                 script {
                     echo "🚀 Deploying to Kubernetes..."
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh """
+                        bat """
                             echo "Creating namespace..."
-                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/namespace.yaml
+                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/namespace.yaml
                             
                             echo "Deploying application..."
-                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/deployment.yaml
-                            kubectl --kubeconfig=\$KUBECONFIG apply -f k8s/service.yaml
+                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/deployment.yaml
+                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/service.yaml
                             
                             echo "Waiting for rollout..."
-                            kubectl --kubeconfig=\$KUBECONFIG rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s
+                            kubectl --kubeconfig=%KUBECONFIG% rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s
                         """
                     }
                 }
@@ -72,11 +72,11 @@ pipeline {
                 script {
                     echo "❤️ Performing health check..."
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        sh """
+                        bat """
                             echo "=== Pods in ${env.K8S_NAMESPACE} ==="
-                            kubectl --kubeconfig=\$KUBECONFIG get pods -n ${env.K8S_NAMESPACE}
+                            kubectl --kubeconfig=%KUBECONFIG% get pods -n ${env.K8S_NAMESPACE}
                             echo "=== Services in ${env.K8S_NAMESPACE} ==="
-                            kubectl --kubeconfig=\$KUBECONFIG get svc -n ${env.K8S_NAMESPACE}
+                            kubectl --kubeconfig=%KUBECONFIG% get svc -n ${env.K8S_NAMESPACE}
                         """
                     }
                 }
