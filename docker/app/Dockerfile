@@ -1,15 +1,12 @@
-﻿FROM python:3.9-slim
+﻿FROM nginx:alpine
 
-WORKDIR /app
+# Копируем статические файлы приложения
+COPY ../../index.html /usr/share/nginx/html/
+COPY ../../style.css /usr/share/nginx/html/
+COPY ../../script.js /usr/share/nginx/html/
 
-# Создаем папку для логов при сборке образа
-RUN mkdir -p /app/logs
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY app/ .
-
+# Открываем порт 80
 EXPOSE 5000
 
-CMD ["python", "main.py"]
+# Запускаем nginx
+CMD ["nginx", "-g", "daemon off;"]
