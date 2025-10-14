@@ -1,67 +1,340 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Calculator - Kubernetes CI/CD</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Калькулятор</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px;
+        }
+        
+        .calculator {
+            background: white; 
+            border-radius: 20px; 
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2); 
+            width: 100%;
+            max-width: 350px;
+        }
+        
+        h1 { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 20px; 
+            font-size: 1.8rem;
+        }
+        
+        .display {
+            background: #f8f9fa; 
+            border: 2px solid #e9ecef; 
+            border-radius: 10px; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            text-align: right; 
+            font-size: 1.3rem; 
+            min-height: 50px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .input-group { 
+            display: flex; 
+            gap: 8px; 
+            margin-bottom: 15px; 
+        }
+        
+        input { 
+            flex: 1; 
+            padding: 10px; 
+            border: 2px solid #e9ecef; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            text-align: center; 
+            min-width: 0;
+        }
+        
+        input:focus { 
+            outline: none; 
+            border-color: #667eea; 
+        }
+        
+        .buttons { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 8px; 
+            margin-bottom: 15px; 
+        }
+        
+        button {
+            padding: 12px 8px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            background: #667eea; 
+            color: white;
+            transition: background 0.3s ease;
+            min-height: 45px;
+        }
+        
+        button:hover { 
+            background: #764ba2; 
+        }
+        
+        button.operator { 
+            background: #ff6b6b; 
+        }
+        
+        button.operator:hover { 
+            background: #ee5a5a; 
+        }
+        
+        button.equals { 
+            background: #51cf66; 
+            grid-column: span 2; 
+            font-size: 1.2rem;
+        }
+        
+        button.equals:hover { 
+            background: #40c057; 
+        }
+        
+        .result {
+            background: #e7f5ff; 
+            border: 2px solid #a5d8ff; 
+            border-radius: 10px; 
+            padding: 12px; 
+            margin-top: 15px; 
+            text-align: center;
+            font-size: 1rem;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .error { 
+            background: #ffe3e3; 
+            border-color: #ffa8a8; 
+            color: #c92a2a; 
+        }
+        
+        .success { 
+            background: #d3f9d8; 
+            border-color: #69db7c; 
+            color: #2b8a3e; 
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🧮 Advanced Calculator</h1>
-            <p class="subtitle">Powered by Kubernetes & CI/CD</p>
-        </header>
-
-        <div class="calculator">
-            <div class="display">
-                <div id="expression">0</div>
-                <div id="result">0</div>
-            </div>
-
-            <div class="buttons">
-                <button class="btn func" onclick="clearDisplay()">C</button>
-                <button class="btn func" onclick="deleteLast()">⌫</button>
-                <button class="btn func" onclick="calculateOperation('sqrt')">√</button>
-                <button class="btn func" onclick="calculateOperation('power')">x²</button>
-
-                <button class="btn num" onclick="appendNumber(7)">7</button>
-                <button class="btn num" onclick="appendNumber(8)">8</button>
-                <button class="btn num" onclick="appendNumber(9)">9</button>
-                <button class="btn operation" onclick="setOperation('divide')">÷</button>
-
-                <button class="btn num" onclick="appendNumber(4)">4</button>
-                <button class="btn num" onclick="appendNumber(5)">5</button>
-                <button class="btn num" onclick="appendNumber(6)">6</button>
-                <button class="btn operation" onclick="setOperation('multiply')">×</button>
-
-                <button class="btn num" onclick="appendNumber(1)">1</button>
-                <button class="btn num" onclick="appendNumber(2)">2</button>
-                <button class="btn num" onclick="appendNumber(3)">3</button>
-                <button class="btn operation" onclick="setOperation('subtract')">-</button>
-
-                <button class="btn num" onclick="appendNumber(0)">0</button>
-                <button class="btn" onclick="appendDecimal()">.</button>
-                <button class="btn operation" onclick="calculatePercentage()">%</button>
-                <button class="btn operation" onclick="setOperation('add')">+</button>
-
-                <button class="btn equals" onclick="calculateResult()">=</button>
-            </div>
+    <div class="calculator">
+        <h1>🧮 Калькулятор</h1>
+        <div class="display" id="display">Введите числа ниже</div>
+        
+        <div class="input-group">
+            <input type="number" id="num1" placeholder="Первое число" value="25">
+            <input type="number" id="num2" placeholder="Второе число" value="5">
         </div>
-
-        <div class="history">
-            <h3>Operations History</h3>
-            <div id="history-list">No operations yet</div>
+        
+        <div class="buttons">
+            <button class="operator" data-op="add">+</button>
+            <button class="operator" data-op="subtract">-</button>
+            <button class="operator" data-op="multiply">×</button>
+            <button class="operator" data-op="divide">÷</button>
+            <button class="operator" data-op="power">^</button>
+            <button class="operator" data-op="sqrt">√</button>
+            <button class="operator" data-op="percentage">%</button>
+            <button id="clearBtn">C</button>
         </div>
-
-        <footer>
-            <div class="status">
-                <span id="status">🟢 System Online</span>
-                <span id="version">v2.0.0</span>
-            </div>
-        </footer>
+        
+        <button class="equals" id="testBtn">Протестировать все операции</button>
+        
+        <div class="result" id="result">Готов к вычислениям</div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Все функции объявлены до их использования
+        function getSymbol(operation) {
+            const symbols = {
+                'add': '+',
+                'subtract': '-', 
+                'multiply': '×',
+                'divide': '÷',
+                'power': '^',
+                'percentage': '%',
+                'sqrt': '√'
+            };
+            return symbols[operation] || operation;
+        }
+
+        function showResult(message, isError = false) {
+            const resultElement = document.getElementById('result');
+            resultElement.innerHTML = message;
+            
+            if (isError) {
+                resultElement.className = 'result error';
+            } else {
+                resultElement.className = 'result success';
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('num1').value = '';
+            document.getElementById('num2').value = '';
+            document.getElementById('display').textContent = 'Введите числа ниже';
+            showResult('Готов к вычислениям', false);
+        }
+
+        // Основная функция для вычислений
+        async function calculate(operation) {
+            const num1 = parseFloat(document.getElementById('num1').value);
+            const num2 = parseFloat(document.getElementById('num2').value);
+            
+            if (operation === 'sqrt') {
+                if (isNaN(num1)) {
+                    showResult('Пожалуйста, введите корректное число для квадратного корня', true);
+                    return;
+                }
+            } else {
+                if (isNaN(num1) || isNaN(num2)) {
+                    showResult('Пожалуйста, введите корректные числа', true);
+                    return;
+                }
+            }
+            
+            try {
+                console.log('Отправка запроса:', { num1, num2, operation });
+                
+                const requestBody = operation === 'sqrt' 
+                    ? { num1: num1, operation: operation }
+                    : { num1: num1, num2: num2, operation: operation };
+                
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const data = await response.json();
+                console.log('Ответ:', data);
+                
+                if (response.ok) {
+                    const symbol = getSymbol(operation);
+                    const expression = operation === 'sqrt' 
+                        ? '√' + num1 
+                        : num1 + ' ' + symbol + ' ' + num2;
+                    
+                    document.getElementById('display').textContent = data.expression || expression;
+                    showResult('Результат: ' + data.result, false);
+                } else {
+                    showResult('Ошибка: ' + data.error, true);
+                }
+                
+            } catch (error) {
+                console.error('Ошибка вычисления:', error);
+                showResult('Сетевая ошибка: ' + error.message, true);
+            }
+        }
+
+        // Функция для тестирования всех операций
+        async function testAllOperations() {
+            const num1 = parseFloat(document.getElementById('num1').value);
+            const num2 = parseFloat(document.getElementById('num2').value);
+            
+            if (isNaN(num1) || isNaN(num2)) {
+                showResult('Пожалуйста, введите корректные числа', true);
+                return;
+            }
+            
+            const operations = [
+                {op: 'add', name: 'Сложение'},
+                {op: 'subtract', name: 'Вычитание'},
+                {op: 'multiply', name: 'Умножение'},
+                {op: 'divide', name: 'Деление'},
+                {op: 'power', name: 'Степень'},
+                {op: 'percentage', name: 'Процент'}
+            ];
+            
+            let results = [];
+            showResult('Выполняются вычисления...', false);
+            
+            for (const item of operations) {
+                try {
+                    const response = await fetch('/calculate', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({num1: num1, num2: num2, operation: item.op})
+                    });
+                    
+                    const data = await response.json();
+                    if (response.ok) {
+                        results.push(item.name + ': ' + data.result);
+                    } else {
+                        results.push(item.name + ': Ошибка');
+                    }
+                } catch (error) {
+                    results.push(item.name + ': Ошибка сети');
+                }
+                
+                // Небольшая задержка между запросами
+                await new Promise(function(resolve) { setTimeout(resolve, 100); });
+            }
+            
+            // Тестируем квадратный корень отдельно
+            try {
+                const response = await fetch('/calculate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({num1: num1, operation: 'sqrt'})
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    results.push('Квадратный корень: ' + data.result);
+                }
+            } catch (error) {
+                results.push('Квадратный корень: Ошибка');
+            }
+            
+            showResult(results.join('<br>'), false);
+        }
+
+        // Добавляем обработчики событий после загрузки DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обработчики для кнопок операций
+            const buttons = document.querySelectorAll('.operator');
+            buttons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    const operation = this.getAttribute('data-op');
+                    calculate(operation);
+                });
+            });
+            
+            // Обработчик для кнопки очистки
+            document.getElementById('clearBtn').addEventListener('click', clearAll);
+            
+            // Обработчик для кнопки тестирования
+            document.getElementById('testBtn').addEventListener('click', testAllOperations);
+            
+            // Устанавливаем значения по умолчанию
+            document.getElementById('num1').value = '25';
+            document.getElementById('num2').value = '5';
+            
+            console.log('Калькулятор инициализирован');
+        });
+    </script>
 </body>
 </html>
