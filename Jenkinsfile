@@ -91,7 +91,7 @@ pipeline {
         always {
             script {
                 echo "🏁 Pipeline execution completed"
-                // Простая отправка через curl
+                // Используем безопасный метод для отправки уведомлений
                 sendTelegramNotification(currentBuild.currentResult)
             }
         }
@@ -112,30 +112,15 @@ def sendTelegramNotification(String buildStatus) {
     def message = ""
     
     if (buildStatus == "SUCCESS") {
-        message = "✅ Pipeline УСПЕШНО завершен!\\n\\n" +
-                 "📦 Проект: Calculator App\\n" +
-                 "🔢 Номер сборки: ${env.BUILD_NUMBER}\\n" +
-                 "🐳 Образ: ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}\\n" +
-                 "🚀 Развернуто в: ${env.K8S_NAMESPACE}\\n" +
-                 "⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
+        message = "✅ Pipeline УСПЕШНО завершен!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🐳 Образ: ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}%0A🚀 Развернуто в: ${env.K8S_NAMESPACE}%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     } else if (buildStatus == "FAILURE") {
-        message = "❌ Pipeline ЗАВЕРШИЛСЯ С ОШИБКОЙ!\\n\\n" +
-                 "📦 Проект: Calculator App\\n" +
-                 "🔢 Номер сборки: ${env.BUILD_NUMBER}\\n" +
-                 "🔍 Проверьте логи Jenkins\\n" +
-                 "⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
+        message = "❌ Pipeline ЗАВЕРШИЛСЯ С ОШИБКОЙ!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🔍 Проверьте логи Jenkins%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     } else {
-        message = "⚠️ Pipeline завершен со статусом: ${buildStatus}\\n\\n" +
-                 "📦 Проект: Calculator App\\n" +
-                 "🔢 Номер сборки: ${env.BUILD_NUMBER}\\n" +
-                 "⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
+        message = "⚠️ Pipeline завершен со статусом: ${buildStatus}%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     }
     
-    // Используем bat для отправки через curl (Windows)
+    // Безопасная отправка через одну строку
     bat """
-        curl -s -X POST https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage \\
-        -d chat_id=${env.TELEGRAM_CHAT_ID} \\
-        -d text="${message}" \\
-        -d parse_mode=Markdown || echo "Failed to send Telegram notification"
+        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}&parse_mode=Markdown" || echo "Telegram notification failed"
     """
 }
