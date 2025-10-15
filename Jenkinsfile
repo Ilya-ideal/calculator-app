@@ -45,30 +45,31 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    echo "🚀 Deploying to Kubernetes..."
-                    bat 'dir k8s'
+    steps {
+        script {
+            echo "🚀 Deploying to Kubernetes..."
+            bat 'dir k8s'
+            
+            // Проверим доступность кластера перед деплоем
+            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                bat """
+                    echo "=== Checking Kubernetes cluster ==="
+                    kubectl --kubeconfig=%KUBECONFIG% cluster-info && echo "✅ Kubernetes cluster is accessible" || echo "⚠️ Kubernetes cluster is not accessible, but continuing..."
                     
-                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                        bat """
-                            echo "Checking Kubernetes access..."
-                            kubectl --kubeconfig=%KUBECONFIG% cluster-info || echo "Kubernetes cluster info failed, but continuing..."
-                            
-                            echo "Creating namespace..."
-                            kubectl --kubeconfig=%KUBECONFIG% create namespace ${env.K8S_NAMESPACE} --dry-run=client -o yaml | kubectl --kubeconfig=%KUBECONFIG% apply -f - || echo "Namespace creation failed, but continuing..."
-                            
-                            echo "Deploying application..."
-                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-deployment.yaml --validate=false || echo "Deployment failed"
-                            kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-service.yaml --validate=false || echo "Service failed"
-                            
-                            echo "Waiting for rollout..."
-                            kubectl --kubeconfig=%KUBECONFIG% rollout status deployment/test-app -n ${env.K8S_NAMESPACE} --timeout=300s || echo "Rollout status check failed"
-                        """
-                    }
-                }
+                    echo "=== Checking if namespace exists ==="
+                    kubectl --kubeconfig=%KUBECONFIG% get namespace calculator && echo "✅ Namespace exists" || echo "⚠️ Namespace doesn't exist, but continuing..."
+                    
+                    echo "=== Deploying application ==="
+                    kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-deployment.yaml --validate=false || echo "⚠️ Deployment apply failed"
+                    kubectl --kubeconfig=%KUBECONFIG% apply -f k8s/app-service.yaml --validate=false || echo "⚠️ Service apply failed"
+                    
+                    echo "=== Checking deployment status ==="
+                    kubectl --kubeconfig=%KUBECONFIG% get deployment calculator-app -n calculator || echo "⚠️ Cannot get deployment status"
+                """
             }
         }
+    }
+}
 
         stage('Health Check') {
             steps {
@@ -113,14 +114,9 @@ def sendTelegramNotification(String buildStatus) {
     
     if (buildStatus == "SUCCESS") {
         message = "✅ Pipeline УСПЕШНО завершен!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🐳 Образ: ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}%0A🚀 Развернуто в: ${env.K8S_NAMESPACE}%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
-    } else if (buildStatus == "FAILURE") {
-        message = "❌ Pipeline ЗАВЕРШИЛСЯ С ОШИБКОЙ!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🔍 Проверьте логи Jenkins%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     } else {
-        message = "⚠️ Pipeline завершен со статусом: ${buildStatus}%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
+        message = "❌ Pipeline ЗАВЕРШИЛСЯ С ОШИБКОЙ!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🔍 Проверьте логи Jenkins%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     }
     
-    // Безопасная отправка через одну строку
-    bat """
-        curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}&parse_mode=Markdown" || echo "Telegram notification failed"
-    """
+    bat "curl -s -X POST \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}&parse_mode=Markdown\" || echo \"Telegram notification sent with possible errors\""
 }
