@@ -18,6 +18,29 @@ def index():
     logger.info("Home page accessed")
     return render_template('index.html')
 
+# ПРОСТЫЕ GET ENDPOINTS ДЛЯ ТЕСТИРОВАНИЯ
+@app.route('/add/<int:a>/<int:b>')
+def simple_add(a, b):
+    result = a + b
+    return jsonify({"result": result, "operation": "add"})
+
+@app.route('/subtract/<int:a>/<int:b>')
+def simple_subtract(a, b):
+    result = a - b
+    return jsonify({"result": result, "operation": "subtract"})
+
+@app.route('/multiply/<int:a>/<int:b>')
+def simple_multiply(a, b):
+    result = a * b
+    return jsonify({"result": result, "operation": "multiply"})
+
+@app.route('/divide/<int:a>/<int:b>')
+def simple_divide(a, b):
+    if b == 0:
+        return jsonify({"error": "Division by zero"}), 400
+    result = a / b
+    return jsonify({"result": result, "operation": "divide"})
+
 @app.route('/calculate', methods=['POST'])
 def calculate():
     try:
@@ -76,7 +99,7 @@ def calculate():
 @app.route('/health')
 def health():
     return jsonify({
-        'status': 'healthy',
+        'status': True,
         'timestamp': datetime.now().isoformat(),
         'version': '2.0.0'
     })
