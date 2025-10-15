@@ -118,5 +118,5 @@ def sendTelegramNotification(String buildStatus) {
         message = "❌ Pipeline ЗАВЕРШИЛСЯ С ОШИБКОЙ!%0A%0A📦 Проект: Calculator App%0A🔢 Номер сборки: ${env.BUILD_NUMBER}%0A🔍 Проверьте логи Jenkins%0A⏰ Время: ${new Date().format('dd.MM.yyyy HH:mm:ss')}"
     }
     
-    bat "curl -s -X POST \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}&parse_mode=Markdown\" || echo \"Telegram notification sent with possible errors\""
+    bat "curl -s -X POST \"https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${message}&parse_mode=Markdown\" || echo \"Telegram notification completed\""
 }
