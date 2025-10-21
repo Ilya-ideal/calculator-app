@@ -1,0 +1,19 @@
+frontend:
+  replicaCount: 2
+  image:
+    repository: yourusername/calculator-frontend
+    tag: latest
+    
+backend:
+  replicaCount: 3
+  image:
+    repository: yourusername/calculator-backend
+    tag: latest
+
+database:
+  enabled: true
+  
+monitoring:
+  enabled: true
+  grafana:
+    adminPassword: admin

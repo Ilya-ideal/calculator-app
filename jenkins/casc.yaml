@@ -1,0 +1,39 @@
+jenkins:
+  systemMessage: "Calculator App CI/CD Pipeline"
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin123"
+
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:admin"
+        - "Overall/Read:authenticated"
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  sSHLauncher:
+    sshHostKeyVerificationStrategy: "nonVerifyingKey"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "dockerhub-credentials"
+              username: "your-dockerhub-username"
+              password: "your-dockerhub-password"
+          - string:
+              scope: GLOBAL
+              id: "telegram-bot-token"
+              secret: "your-telegram-bot-token"
+          - string:
+              scope: GLOBAL
+              id: "telegram-chat-id"
+              secret: "your-telegram-chat-id"
